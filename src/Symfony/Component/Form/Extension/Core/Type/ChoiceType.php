@@ -170,7 +170,7 @@ class ChoiceType extends AbstractType
      */
     public function getParent(array $options)
     {
-        return isset($options['expanded']) && $options['expanded'] ? 'form' : 'field';
+        return $options['expanded'] ? 'form' : 'field';
     }
 
     /**

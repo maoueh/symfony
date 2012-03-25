@@ -266,29 +266,6 @@ UPGRADE FROM 2.0 to 2.1
     }
     ```
 
-  * The options passed to the `getParent()` method of form types no longer
-    contain default options.
-
-    You should check if options exist before attempting to read their value.
-
-    Before:
-
-    ```
-    public function getParent(array $options)
-    {
-        return 'single_text' === $options['widget'] ? 'text' : 'choice';
-    }
-    ```
-
-    After:
-
-    ```
-    public function getParent(array $options)
-    {
-        return isset($options['widget']) && 'single_text' === $options['widget'] ? 'text' : 'choice';
-    }
-    ```
-
   * The `add()`, `remove()`, `setParent()`, `bind()` and `setData()` methods in
     the Form class now throw an exception if the form is already bound.
 
