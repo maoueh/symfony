@@ -560,6 +560,19 @@ class FormFactoryTest extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf('Symfony\Tests\Component\Form\Fixtures\Author', current($form->getData()));
     }
 
+    public function testNewDateTimeIsAcceptedAsDataFromBuilder()
+    {
+        $type = new Fixtures\ContainsDateTimeChildType();
+        $this->factory->addType(new \Symfony\Component\Form\Extension\Core\Type\FormType());
+        $this->factory->addType(new \Symfony\Component\Form\Extension\Core\Type\FieldType());
+        $this->factory->addType(new \Symfony\Component\Form\Extension\Core\Type\DateTimeType());
+        $this->factory->addType(new \Symfony\Component\Form\Extension\Core\Type\DateType());
+        $this->factory->addType(new \Symfony\Component\Form\Extension\Core\Type\TimeType());
+        $this->factory->addType(new \Symfony\Component\Form\Extension\Core\Type\ChoiceType());
+        $builder = $this->factory->createNamedBuilder($type, 'test');
+        $builder->getForm();
+    }
+
     private function createMockFactory(array $methods = array())
     {
         return $this->getMockBuilder('Symfony\Component\Form\FormFactory')
