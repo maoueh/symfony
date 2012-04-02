@@ -222,17 +222,19 @@ class FormFactory implements FormFactoryInterface
         $defaultOptions = array();
         $optionValues = array();
         $passedOptions = $options;
+        $knownOptions = array();
 
         // Bottom-up determination of the type hierarchy
         // Start with the actual type and look for the parent type
         // The complete hierarchy is saved in $types, the first entry being
         // the root and the last entry being the leaf (the concrete type)
         while (null !== $type) {
-            if ($type instanceof FormTypeInterface) {
-                if ($type->getName() == $type->getParent($options)) {
-                    throw new FormException(sprintf('The form type name "%s" for class "%s" cannot be the same as the parent type.', $type->getName(), get_class($type)));
-                }
 
+            // First we try to get the actual type object. If we already have
+            // an object here, we add it to the list of registered types so we
+            // can get it by name next time, else, we fetch it by that name and
+            // we add it to the list of types
+            if ($type instanceof FormTypeInterface) {
                 $this->addType($type);
             } elseif (is_string($type)) {
                 $type = $this->getType($type);
@@ -242,38 +244,38 @@ class FormFactory implements FormFactoryInterface
 
             array_unshift($types, $type);
 
-            // getParent() cannot see default options set by this type nor
-            // default options set by parent types
-            // As a result, the options always have to be checked for
-            // existence with isset() before using them in this method.
-            $type = $type->getParent($options);
-        }
-
-        // Top-down determination of the options and default options
-        foreach ($types as $type) {
-            // Merge the default options of all types to an array of default
-            // options. Default options of children override default options
-            // of parents.
-            // Default options of ancestors are already visible in the $options
-            // array passed to the following methods.
-            $defaultOptions = array_replace($defaultOptions, $type->getDefaultOptions($options));
+            // Here we get the types default options based on the options passed
+            // to the factory and merged with the result of the getDefaultOptions
+            // call of the last type so a parent will receive the default options
+            // of its child. Concurrenty, we build a list knownOptions to validate
+            // the list of passed options agains. A passed options must be a
+            // default options of at least one of the types
+            $defaultOptions = $type->getDefaultOptions(array_replace($options, $defaultOptions));
             $optionValues = array_merge_recursive($optionValues, $type->getAllowedOptionValues($options));
 
             foreach ($type->getExtensions() as $typeExtension) {
-                $defaultOptions = array_replace($defaultOptions, $typeExtension->getDefaultOptions($options));
+                $defaultOptions = array_replace($defaultOptions, $typeExtension->getDefaultOptions(array_replace($options, $defaultOptions)));
                 $optionValues = array_merge_recursive($optionValues, $typeExtension->getAllowedOptionValues($options));
             }
 
-            // In each turn, the options are replaced by the combination of
-            // the currently known default options and the passed options.
-            // It is important to merge with $passedOptions and not with
-            // $options, otherwise default options of parents would override
-            // default options of child types.
-            $options = array_replace($defaultOptions, $passedOptions);
+            $knownOptions = array_merge($knownOptions, array_keys($defaultOptions));
+
+            // Finally, we will determine the parent of the current type, by
+            // passing it the default options of the type merged with the passed
+            // options. This will allow a type to return a variable parent type
+            // based on it's childrens default options, e.g. a choice widget
+            // can return a form parent type, if its child has "expanded" set to
+            // true
+            $options = array_replace($defaultOptions, $options);
+            $parentType = $type->getParent($options);
+            if ($type->getName() == $parentType) {
+                throw new FormException(sprintf('The form type name "%s" for class "%s" cannot be the same as the parent type.', $type->getName(), get_class($type)));
+            }
+            $type = $parentType;
         }
 
         $type = end($types);
-        $knownOptions = array_keys($defaultOptions);
+
         $diff = array_diff(self::$requiredOptions, $knownOptions);
 
         if (count($diff) > 0) {

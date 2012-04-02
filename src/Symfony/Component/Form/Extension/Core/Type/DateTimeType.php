@@ -200,7 +200,7 @@ class DateTimeType extends AbstractType
      */
     public function getParent(array $options)
     {
-        return isset($options['widget']) && 'single_text' === $options['widget'] ? 'field' : 'form';
+        return 'single_text' === $options['widget'] ? 'field' : 'form';
     }
 
     /**
